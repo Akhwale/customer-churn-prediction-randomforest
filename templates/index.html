@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Churn Predictor</title>
+    <style>
+        /* ── General reset and font ───────────────────── */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: #f0f2f5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+
+        /* ── Page header ──────────────────────────────── */
+        h1 {
+            font-size: 28px;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        /* ── Main card container ──────────────────────── */
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 36px;
+            width: 100%;
+            max-width: 720px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        /* ── Section headings inside the form ────────── */
+        .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #888;
+            margin: 24px 0 12px;
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 8px;
+        }
+
+        /* ── Two column grid for form fields ─────────── */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* ── Individual form field ────────────────────── */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #444;
+        }
+
+        /* ── Input and select styling ─────────────────── */
+        input, select {
+            padding: 10px 14px;
+            border: 1.5px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #333;
+            background: #fafafa;
+            transition: border 0.2s;
+            width: 100%;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #4f46e5;
+            background: white;
+        }
+
+        /* ── Submit button ────────────────────────────── */
+        button {
+            margin-top: 28px;
+            width: 100%;
+            padding: 14px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #4338ca;
+        }
+
+        /* ── Result box shown after prediction ───────── */
+        .result-box {
+            margin-top: 28px;
+            padding: 24px;
+            border-radius: 12px;
+            display: none;  /* hidden until prediction returns */
+            text-align: center;
+        }
+
+        /* Green background for low risk customers */
+        .result-stay {
+            background: #f0fdf4;
+            border: 1.5px solid #86efac;
+        }
+
+        /* Red background for high risk customers */
+        .result-churn {
+            background: #fff1f2;
+            border: 1.5px solid #fca5a5;
+        }
+
+        .result-emoji {
+            font-size: 40px;
+            margin-bottom: 8px;
+        }
+
+        .result-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .result-stay .result-title  { color: #16a34a; }
+        .result-churn .result-title { color: #dc2626; }
+
+        .result-prob {
+            font-size: 14px;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        /* ── Risk badge ───────────────────────────────── */
+        .risk-badge {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 4px 14px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .badge-low    { background: #dcfce7; color: #16a34a; }
+        .badge-medium { background: #fef9c3; color: #ca8a04; }
+        .badge-high   { background: #fee2e2; color: #dc2626; }
+
+        /* ── Loading spinner shown while waiting ──────── */
+        .spinner {
+            display: none;
+            margin: 16px auto 0;
+            width: 28px;
+            height: 28px;
+            border: 3px solid #e0e0e0;
+            border-top-color: #4f46e5;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🔮 Customer Churn Predictor</h1>
+    <p class="subtitle">Fill in the customer details below to predict churn probability</p>
+
+    <div class="card">
+        <form id="churnForm">
+
+            <!-- ── Personal Details ───────────────────── -->
+            <div class="section-title">Personal Details</div>
+            <div class="form-grid">
+
+                <div class="form-group">
+                    <label>Gender</label>
+                    <select name="gender">
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Senior Citizen</label>
+                    <select name="SeniorCitizen">
+                        <option value="0">No</option>
+                        <option value="1">Yes</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Partner</label>
+                    <select name="Partner">
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Dependents</label>
+                    <select name="Dependents">
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <!-- ── Account Details ────────────────────── -->
+            <div class="section-title">Account Details</div>
+            <div class="form-grid">
+
+                <div class="form-group">
+                    <label>Tenure (months)</label>
+                    <input type="number" name="tenure" min="0" max="72" value="12">
+                </div>
+
+                <div class="form-group">
+                    <label>Contract Type</label>
+                    <select name="Contract">
+                        <option value="Month-to-month">Month-to-month</option>
+                        <option value="One year">One year</option>
+                        <option value="Two year">Two year</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Monthly Charges ($)</label>
+                    <input type="number" name="MonthlyCharges" min="0" step="0.01" value="65.00">
+                </div>
+
+                <div class="form-group">
+                    <label>Total Charges ($)</label>
+                    <input type="number" name="TotalCharges" min="0" step="0.01" value="780.00">
+                </div>
+
+                <div class="form-group">
+                    <label>Paperless Billing</label>
+                    <select name="PaperlessBilling">
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Payment Method</label>
+                    <select name="PaymentMethod">
+                        <option value="Electronic check">Electronic check</option>
+                        <option value="Mailed check">Mailed check</option>
+                        <option value="Bank transfer (automatic)">Bank transfer (automatic)</option>
+                        <option value="Credit card (automatic)">Credit card (automatic)</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <!-- ── Services ───────────────────────────── -->
+            <div class="section-title">Services</div>
+            <div class="form-grid">
+
+                <div class="form-group">
+                    <label>Phone Service</label>
+                    <select name="PhoneService">
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Multiple Lines</label>
+                    <select name="MultipleLines">
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No phone service">No phone service</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Internet Service</label>
+                    <select name="InternetService">
+                        <option value="DSL">DSL</option>
+                        <option value="Fiber optic">Fiber optic</option>
+                        <option value="No">No</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Online Security</label>
+                    <select name="OnlineSecurity">
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No internet service">No internet service</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Online Backup</label>
+                    <select name="OnlineBackup">
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No internet service">No internet service</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Device Protection</label>
+                    <select name="DeviceProtection">
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No internet service">No internet service</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Tech Support</label>
+                    <select name="TechSupport">
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No internet service">No internet service</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Streaming TV</label>
+                    <select name="StreamingTV">
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No internet service">No internet service</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Streaming Movies</label>
+                    <select name="StreamingMovies">
+                        <option value="No">No</option>
+                        <option value="Yes">Yes</option>
+                        <option value="No internet service">No internet service</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <!-- ── Submit button ──────────────────────── -->
+            <button type="submit">🔮 Predict Churn</button>
+
+        </form>
+
+        <!-- Spinner shown while waiting for prediction -->
+        <div class="spinner" id="spinner"></div>
+
+        <!-- Result box — hidden until prediction returns -->
+        <div class="result-box" id="resultBox">
+            <div class="result-emoji" id="resultEmoji"></div>
+            <div class="result-title" id="resultTitle"></div>
+            <div class="result-prob" id="resultProb"></div>
+            <div class="risk-badge" id="riskBadge"></div>
+        </div>
+
+    </div>
+
+    <script>
+        // Listen for the form submission
+        document.getElementById("churnForm").addEventListener("submit", async function(e) {
+
+            // Prevent the page from refreshing on submit — we handle it ourselves
+            e.preventDefault();
+
+            // Show the spinner while we wait for the prediction
+            // Hide any previous result so the user knows a new prediction is loading
+            document.getElementById("spinner").style.display = "block";
+            document.getElementById("resultBox").style.display = "none";
+
+            // Collect all the form field values into a FormData object
+            // FormData automatically picks up every named input and select
+            const formData = new FormData(this);
+
+            // Send the form data to our Flask /predict endpoint
+            // fetch() makes the HTTP request without refreshing the page
+            const response = await fetch("/predict", {
+                method: "POST",
+                body: formData
+            });
+
+            // Parse the JSON response Flask sends back
+            const result = await response.json();
+
+            // Hide the spinner now that we have a result
+            document.getElementById("spinner").style.display = "none";
+
+            // Fill in the result box with the prediction details
+            const box   = document.getElementById("resultBox");
+            const emoji = document.getElementById("resultEmoji");
+            const title = document.getElementById("resultTitle");
+            const prob  = document.getElementById("resultProb");
+            const badge = document.getElementById("riskBadge");
+
+            // Set the emoji and title based on the prediction
+            if (result.prediction === "LIKELY TO CHURN") {
+                emoji.textContent = "⚠️";
+                title.textContent = "This customer is likely to churn";
+                box.className = "result-box result-churn";
+            } else {
+                emoji.textContent = "✅";
+                title.textContent = "This customer is likely to stay";
+                box.className = "result-box result-stay";
+            }
+
+            // Show the churn and stay probabilities
+            prob.textContent = `Churn probability: ${result.churn_probability} — Stay probability: ${result.stay_probability}`;
+
+            // Set the risk badge color based on risk level
+            badge.textContent = result.risk_level;
+            if (result.risk_level === "High Risk") {
+                badge.className = "risk-badge badge-high";
+            } else if (result.risk_level === "Medium Risk") {
+                badge.className = "risk-badge badge-medium";
+            } else {
+                badge.className = "risk-badge badge-low";
+            }
+
+            // Show the result box
+            box.style.display = "block";
+        });
+    </script>
+
+</body>
+</html>
